@@ -1,0 +1,60 @@
+import random
+import numpy as np
+from matplotlib import pyplot as plt
+from scipy.optimize import curve_fit
+import time
+import scipy.stats as stats
+
+n = 1000
+N = 1000
+bin_width = 2.5
+
+def random_walk_1(n):
+    phi = np.random.uniform(0., 2. * np.pi, size = n)
+    x_0 = np.insert(np.cumsum(np.cos(phi)), 0, 0)
+    y_0 = np.insert(np.cumsum(np.sin(phi)), 0, 0)
+    return x_0, y_0
+
+x_0, y_0 = random_walk_1(n)
+
+
+x = []
+y = []
+for i in range(N):
+    x_i, y_i = random_walk_1(n)
+    x.append(x_i[-1])
+    y.append(y_i[-1])
+
+o_i, bins, _ = plt.hist(x, bins=np.arange(-np.max(x), np.max(x) + bin_width, bin_width), label="Observed")
+bin_centers = (bins[:-1] + bins[1:]) / 2.
+
+mi = 0
+sigma = np.sqrt(n/2)
+def gauss(x, mi, sigma):
+   return N * bin_width / (sigma * np.sqrt(2. * np.pi)) * np.exp(-(x - mi) ** 2 / (2. * sigma ** 2))
+
+e_i = gauss(bin_centers, mi, sigma)
+
+ndof = len(o_i)
+chi2 = np.sum((o_i - e_i) ** 2. / e_i)
+red_chi2 = chi2 / ndof
+print(f"Chi-squared: {chi2:.2f} / {ndof} dof")
+
+
+p_value = stats.chi2.sf(chi2, ndof)
+print(f"P-value: {p_value:.4f}")
+
+x_plot = np.linspace(min(bins), max(bins), 1000)
+y_plot = gauss(x_plot, mi, sigma)
+
+plt.plot(bin_centers, e_i, 'r-', linewidth=2.5, label='Curva Teorica')
+plt.plot([], [], ' ', label=f'$\chi^2_\\nu = {red_chi2:.2f}$')
+plt.plot([], [], ' ', label=f'$p = {p_value:.3f}$')
+plt.xlabel("x")
+plt.ylabel("o_i")
+plt.title("Random Walk 2D: Distribuzione delle posizioni x finali")
+plt.legend()
+plt.grid(True, linestyle='--', alpha=0.7)
+
+plt.savefig("random_walk_x.png", dpi=300, bbox_inches='tight')
+plt.show()
