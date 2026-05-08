@@ -1,0 +1,60 @@
+import random
+import numpy as np
+from matplotlib import pyplot as plt
+from scipy.optimize import curve_fit
+import time
+import scipy.stats as stats
+
+n = 1000
+N = 1000
+bin_width = 2.5
+
+def random_walk_1(n):
+    phi = np.random.uniform(0., 2. * np.pi, size = n)
+    x_0 = np.insert(np.cumsum(np.cos(phi)), 0, 0)
+    y_0 = np.insert(np.cumsum(np.sin(phi)), 0, 0)
+    return x_0, y_0
+
+x_0, y_0 = random_walk_1(n)
+
+x = []
+y = []
+d = []
+for i in range(N):
+    x_i, y_i = random_walk_1(n)
+    d_i = np.sqrt(x_i[-1]**2 + y_i[-1]**2)
+    d.append(d_i)
+
+# Istogramma standard
+o_i, bins, _ = plt.hist(d, bins=np.arange(0., np.max(d) + bin_width, bin_width), label="Observed")
+bin_centers = (bins[:-1] + bins[1:]) / 2.
+
+# Funzione teorica corretta (Distribuzione di Rayleigh per la distanza d)
+def p(n, d):
+    return N * bin_width * (2. * d / n) * np.exp(-d**2 / n)
+
+e_i = p(n, bin_centers)
+
+# Calcolo Chi-quadro (filtrando e_i > 0 per evitare divisioni per zero)
+valid = e_i > 0
+chi2 = np.sum((o_i[valid] - e_i[valid]) ** 2. / e_i[valid])
+ndof = len(o_i[valid])
+red_chi2= chi2 / ndof
+print(f"Chi-squared: {chi2:.2f} / {ndof} dof")
+
+# Calcolo del p-value usando la distribuzione del chi quadro
+p_value = stats.chi2.sf(chi2, ndof)
+print(f"P-value: {p_value:.4f}")
+
+# Grafico con stile originale
+plt.plot(bin_centers, e_i, 'r-', linewidth=2.5, label='Curva Teorica')
+plt.plot([], [], ' ', label=f'$\chi^2_\\nu = {red_chi2:.2f}$')
+plt.plot([], [], ' ', label=f'$p = {p_value:.3f}$')
+plt.xlabel("d")
+plt.ylabel("o_i")
+plt.title("Random Walk 2D: Distribuzione di $d$")
+plt.legend()
+plt.grid(True, linestyle='--', alpha=0.5)
+
+plt.savefig("random_walk_d.png", dpi=300)
+plt.show()
